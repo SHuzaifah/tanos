@@ -1,0 +1,13 @@
+[package]
+name = "tanos-net"
+version = "0.1.0"
+edition = "2021"
+description = "Networking layer for TanOS: UDP discovery, TCP transport, peer management"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+serde_json = "1"
+anyhow = "1"
+tanos-core = { path = "../tanos-core" }

@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "tanos-core",
+    "tanos-net",
+    "tanos-node",
+]
+resolver = "2"
