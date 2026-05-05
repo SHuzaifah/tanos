@@ -58,6 +58,7 @@ pub async fn run(
     let bc_identity = identity.clone();
     let bc_socket = send_socket.clone();
     let bc_shutdown = shutdown.clone();
+    let bc_peer_table = peer_table.clone();
     let broadcast_handle = tokio::spawn(async move {
         loop {
             tokio::select! {
@@ -66,7 +67,7 @@ pub async fn run(
                     return;
                 }
                 _ = tokio::time::sleep(BEACON_INTERVAL) => {
-                    if let Err(e) = broadcast_beacon(&bc_identity, &bc_socket, tcp_port).await {
+                    if let Err(e) = broadcast_beacon(&bc_identity, &bc_socket, tcp_port, &bc_peer_table).await {
                         warn!(error = %e, "failed to broadcast beacon");
                     }
                 }
@@ -114,20 +115,26 @@ pub async fn run(
     Ok(())
 }
 
-/// Broadcast our own signed beacon to 255.255.255.255.
+/// Broadcast our own signed beacon to 255.255.255.255 and unicast to known peers.
 async fn broadcast_beacon(
     identity: &NodeIdentity,
     socket: &UdpSocket,
     tcp_port: u16,
+    peer_table: &PeerTable,
 ) -> Result<()> {
     let beacon = DiscoveryBeacon::new_signed(identity, tcp_port);
     let payload = serde_json::to_vec(&beacon).context("failed to serialize beacon")?;
 
+    // 1. Send global broadcast
     let dest: SocketAddr = ([255, 255, 255, 255], DISCOVERY_PORT).into();
-    socket
-        .send_to(&payload, dest)
-        .await
-        .context("failed to send beacon")?;
+    let _ = socket.send_to(&payload, dest).await;
+
+    // 2. Unicast directly to all known peers (bypasses Android Wi-Fi broadcast drops)
+    for peer in peer_table.snapshot_peers() {
+        let mut peer_udp_addr = peer.addr;
+        peer_udp_addr.set_port(DISCOVERY_PORT);
+        let _ = socket.send_to(&payload, peer_udp_addr).await;
+    }
 
     debug!(node_id = %beacon.node_id, "broadcast discovery beacon");
     Ok(())
