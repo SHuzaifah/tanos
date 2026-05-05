@@ -28,6 +28,9 @@ COPY tanos-core/src tanos-core/src
 COPY tanos-net/src tanos-net/src
 COPY tanos-node/src tanos-node/src
 
+# Force cargo to recognize the copied files as new so it actually rebuilds them
+RUN find tanos-core tanos-net tanos-node -type f -name "*.rs" -exec touch {} +
+
 # Build for real
 RUN cargo build --release --package tanos-node
 

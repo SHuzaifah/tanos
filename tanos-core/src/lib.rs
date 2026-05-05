@@ -52,6 +52,8 @@ pub struct DiscoveryBeacon {
     pub node_id: String,
     /// Full 32-byte Ed25519 public key.
     pub public_key: [u8; 32],
+    /// Full 32-byte X25519 encryption public key.
+    pub encryption_pubkey: [u8; 32],
     /// TCP port the node is listening on for messages (default 7701).
     pub listen_port: u16,
     /// Number of hops this beacon has travelled (starts at 0).
@@ -94,6 +96,7 @@ impl DiscoveryBeacon {
         let mut buf = Vec::new();
         buf.extend_from_slice(self.node_id.as_bytes());
         buf.extend_from_slice(&self.public_key);
+        buf.extend_from_slice(&self.encryption_pubkey);
         buf.extend_from_slice(&self.listen_port.to_le_bytes());
         buf.push(self.hop_count);
         buf.extend_from_slice(&self.timestamp.to_le_bytes());
@@ -110,6 +113,7 @@ impl DiscoveryBeacon {
         let mut beacon = Self {
             node_id: identity.node_id.clone(),
             public_key: identity.public_key_bytes(),
+            encryption_pubkey: crypto::x25519_pubkey_from_secret(&identity.secret_key_bytes()),
             listen_port,
             hop_count: 0,
             timestamp,

@@ -24,6 +24,7 @@ const PRUNE_INTERVAL: Duration = Duration::from_secs(10);
 pub struct PeerInfo {
     pub node_id: String,
     pub public_key: [u8; 32],
+    pub encryption_pubkey: [u8; 32],
     pub addr: SocketAddr,
     pub hop_count: u8,
     pub last_seen: Instant,
@@ -76,6 +77,7 @@ impl PeerTable {
                 PeerInfo {
                     node_id: beacon.node_id.clone(),
                     public_key: beacon.public_key,
+                    encryption_pubkey: beacon.encryption_pubkey,
                     addr,
                     hop_count,
                     last_seen: now,

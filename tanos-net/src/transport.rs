@@ -203,9 +203,8 @@ pub async fn send_message(
         .get_peer(to_id)
         .context(format!("peer {} not found in table", to_id))?;
 
-    // Encrypt: use the peer's public key (Ed25519) as X25519 key material.
-    // We derive the X25519 public key from the same 32-byte seed.
-    let recipient_x25519_pub = crypto::x25519_pubkey_from_secret(&peer_info.public_key);
+    // Encrypt: use the peer's dedicated X25519 encryption public key.
+    let recipient_x25519_pub = peer_info.encryption_pubkey;
 
     let encrypted = crypto::encrypt(&recipient_x25519_pub, plaintext)
         .context("failed to encrypt message payload")?;
