@@ -1,0 +1,869 @@
+<!DOCTYPE>
+< lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <title>TanOS</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet">
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            :root {
+                --bg: #000000;
+                --surface: #0a0a0a;
+                --card: #111111;
+                --card-hover: #161616;
+                --border: rgba(255, 255, 255, 0.06);
+                --border-active: rgba(255, 255, 255, 0.15);
+                --white: #ffffff;
+                --w90: rgba(255, 255, 255, 0.90);
+                --w60: rgba(255, 255, 255, 0.60);
+                --w40: rgba(255, 255, 255, 0.40);
+                --w25: rgba(255, 255, 255, 0.25);
+                --w15: rgba(255, 255, 255, 0.15);
+                --w10: rgba(255, 255, 255, 0.10);
+                --w06: rgba(255, 255, 255, 0.06);
+                --sent-bg: rgba(255, 255, 255, 0.10);
+                --recv-bg: rgba(255, 255, 255, 0.04);
+                --green: #34c759;
+                --orange: #ff9f0a;
+                --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                --mono: 'SF Mono', 'Menlo', 'Consolas', monospace;
+                --radius: 16px;
+                --radius-sm: 12px;
+                --radius-xs: 8px;
+            }
+
+            html {
+                font-size: 15px;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            body {
+                font-family: var(--sans);
+                background: var(--bg);
+                color: var(--white);
+                height: 100vh;
+                height: 100dvh;
+                overflow: hidden;
+            }
+
+            /* ── App Shell ─────────────────────────────────── */
+            .app {
+                display: flex;
+                height: 100%;
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* ── Sidebar ───────────────────────────────────── */
+            .sidebar {
+                width: 320px;
+                min-width: 320px;
+                border-right: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                background: var(--surface);
+            }
+
+            .sidebar-header {
+                padding: 20px 18px 14px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .sidebar-header h1 {
+                font-size: 1.5rem;
+                font-weight: 700;
+                letter-spacing: -0.5px;
+            }
+
+            .sidebar-identity {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 8px;
+            }
+
+            .dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--green);
+                animation: pulse 2.5s ease-in-out infinite;
+            }
+
+            @keyframes pulse {
+
+                0%,
+                100% {
+                    opacity: 1;
+                }
+
+                50% {
+                    opacity: 0.3;
+                }
+            }
+
+            .sidebar-identity span {
+                font-family: var(--mono);
+                font-size: 0.72rem;
+                color: var(--w40);
+                letter-spacing: 0.3px;
+            }
+
+            /* Tab Switcher */
+            .tabs {
+                display: flex;
+                padding: 10px 14px;
+                gap: 4px;
+            }
+
+            .tab {
+                flex: 1;
+                background: none;
+                border: none;
+                color: var(--w40);
+                font-family: var(--sans);
+                font-size: 0.72rem;
+                font-weight: 600;
+                padding: 8px 0;
+                border-radius: var(--radius-xs);
+                cursor: pointer;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                transition: all 0.2s;
+            }
+
+            .tab.active {
+                background: var(--w10);
+                color: var(--white);
+            }
+
+            .tab:hover:not(.active) {
+                color: var(--w60);
+            }
+
+            /* Peer / Conversation List */
+            .list {
+                flex: 1;
+                overflow-y: auto;
+                padding: 6px 10px;
+            }
+
+            .list-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 12px;
+                border-radius: var(--radius-sm);
+                cursor: pointer;
+                transition: background 0.15s;
+                position: relative;
+            }
+
+            .list-item:hover {
+                background: var(--w06);
+            }
+
+            .list-item.active {
+                background: var(--w10);
+            }
+
+            .list-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: var(--w10);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--w60);
+                flex-shrink: 0;
+                letter-spacing: -0.3px;
+            }
+
+            .list-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .list-name {
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: var(--w90);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .list-preview {
+                font-size: 0.72rem;
+                color: var(--w40);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-top: 2px;
+            }
+
+            .list-meta {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 4px;
+                flex-shrink: 0;
+            }
+
+            .list-time {
+                font-size: 0.62rem;
+                color: var(--w25);
+                font-family: var(--mono);
+            }
+
+            .badge {
+                display: inline-flex;
+                align-items: center;
+                font-size: 0.58rem;
+                font-weight: 600;
+                padding: 2px 7px;
+                border-radius: 10px;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+            }
+
+            .badge.pending {
+                background: rgba(255, 159, 10, 0.15);
+                color: var(--orange);
+            }
+
+            .badge.waiting {
+                background: var(--w06);
+                color: var(--w40);
+            }
+
+            .badge.connected {
+                background: rgba(52, 199, 89, 0.12);
+                color: var(--green);
+            }
+
+            .btn-approve-sm {
+                background: var(--white);
+                color: var(--bg);
+                border: none;
+                font-family: var(--sans);
+                font-size: 0.62rem;
+                font-weight: 600;
+                padding: 5px 12px;
+                border-radius: 14px;
+                cursor: pointer;
+                letter-spacing: 0.3px;
+                transition: opacity 0.2s;
+            }
+
+            .btn-approve-sm:hover {
+                opacity: 0.85;
+            }
+
+            .empty-list {
+                text-align: center;
+                padding: 48px 24px;
+                color: var(--w25);
+                font-size: 0.82rem;
+                line-height: 1.6;
+            }
+
+            /* ── Chat Panel ────────────────────────────────── */
+            .chat-panel {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg);
+            }
+
+            .chat-empty {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+                gap: 12px;
+                color: var(--w25);
+            }
+
+            .chat-empty-icon {
+                font-size: 2.8rem;
+                opacity: 0.15;
+            }
+
+            .chat-empty p {
+                font-size: 0.85rem;
+            }
+
+            /* Chat Header */
+            .chat-header {
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .chat-header-avatar {
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                background: var(--w10);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: var(--w60);
+            }
+
+            .chat-header-info h2 {
+                font-size: 0.92rem;
+                font-weight: 600;
+                letter-spacing: -0.2px;
+            }
+
+            .chat-header-info .chat-header-id {
+                font-family: var(--mono);
+                font-size: 0.62rem;
+                color: var(--w40);
+                margin-top: 1px;
+            }
+
+            .chat-header .e2e-badge {
+                margin-left: auto;
+                font-size: 0.58rem;
+                color: var(--w25);
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .e2e-badge .lock {
+                font-size: 0.72rem;
+            }
+
+            /* Messages Feed */
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 16px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .bubble-wrap {
+                display: flex;
+                animation: fadeIn 0.2s ease;
+            }
+
+            .bubble-wrap>div {
+                max-width: 75%;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(4px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .bubble-wrap.sent {
+                justify-content: flex-end;
+            }
+
+            .bubble-wrap.received {
+                justify-content: flex-start;
+            }
+
+            .bubble {
+                padding: 10px 14px;
+                border-radius: 18px;
+                font-size: 0.88rem;
+                line-height: 1.45;
+                word-break: break-word;
+            }
+
+            .bubble-wrap.sent .bubble {
+                background: var(--white);
+                color: var(--bg);
+                border-bottom-right-radius: 6px;
+            }
+
+            .bubble-wrap.received .bubble {
+                background: var(--w06);
+                color: var(--w90);
+                border-bottom-left-radius: 6px;
+            }
+
+            .bubble-time {
+                font-size: 0.55rem;
+                color: var(--w25);
+                margin-top: 3px;
+                font-family: var(--mono);
+            }
+
+            .bubble-wrap.sent .bubble-time {
+                text-align: right;
+            }
+
+            /* Approval Required Banner */
+            .approval-banner {
+                padding: 16px 20px;
+                background: var(--surface);
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .approval-banner p {
+                font-size: 0.82rem;
+                color: var(--w60);
+            }
+
+            .btn-approve-lg {
+                background: var(--white);
+                color: var(--bg);
+                border: none;
+                font-family: var(--sans);
+                font-size: 0.75rem;
+                font-weight: 600;
+                padding: 8px 20px;
+                border-radius: 18px;
+                cursor: pointer;
+                transition: opacity 0.2s;
+            }
+
+            .btn-approve-lg:hover {
+                opacity: 0.85;
+            }
+
+            /* Chat Input */
+            .chat-input-bar {
+                padding: 12px 16px;
+                border-top: 1px solid var(--border);
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .chat-input {
+                flex: 1;
+                background: var(--card);
+                border: 1px solid var(--border);
+                color: var(--white);
+                font-family: var(--sans);
+                font-size: 0.88rem;
+                padding: 11px 16px;
+                border-radius: 22px;
+                outline: none;
+                transition: border-color 0.2s;
+            }
+
+            .chat-input:focus {
+                border-color: var(--w25);
+            }
+
+            .chat-input::placeholder {
+                color: var(--w25);
+            }
+
+            .btn-send {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                background: var(--white);
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: opacity 0.2s;
+                flex-shrink: 0;
+            }
+
+            .btn-send:hover {
+                opacity: 0.85;
+            }
+
+            .btn-send:disabled {
+                opacity: 0.15;
+                cursor: not-allowed;
+            }
+
+            .btn-send svg {
+                width: 18px;
+                height: 18px;
+                fill: var(--bg);
+            }
+
+            /* Toast */
+            .toast {
+                position: fixed;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%) translateY(80px);
+                background: var(--card);
+                border: 1px solid var(--border);
+                color: var(--w90);
+                font-size: 0.78rem;
+                padding: 10px 22px;
+                border-radius: 20px;
+                transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                z-index: 100;
+                pointer-events: none;
+            }
+
+            .toast.show {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            ::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: var(--w10);
+                border-radius: 2px;
+            }
+
+            /* ── Mobile ─────────────────────────────────────── */
+            @media (max-width: 640px) {
+                .sidebar {
+                    width: 100%;
+                    min-width: 100%;
+                }
+
+                .chat-panel {
+                    display: none;
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    z-index: 10;
+                    background: var(--bg);
+                }
+
+                .chat-panel.open {
+                    display: flex;
+                }
+
+                .chat-header .back-btn {
+                    display: flex;
+                    width: 32px;
+                    height: 32px;
+                    align-items: center;
+                    justify-content: center;
+                    background: none;
+                    border: none;
+                    color: var(--w60);
+                    cursor: pointer;
+                    font-size: 1.2rem;
+                    margin-right: 4px;
+                }
+            }
+
+            @media (min-width: 641px) {
+                .chat-header .back-btn {
+                    display: none;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="app">
+            <!-- Sidebar -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h1>TanOS</h1>
+                    <div class="sidebar-identity">
+                        <div class="dot"></div>
+                        <span id="my-id">Loading…</span>
+                    </div>
+                </div>
+                <div class="tabs">
+                    <button class="tab active" data-tab="chats" onclick="switchTab('chats')">Chats</button>
+                    <button class="tab" data-tab="peers" onclick="switchTab('peers')">Peers</button>
+                    <button class="tab" data-tab="profile" onclick="switchTab('profile')">Profile</button>
+                </div>
+                <div class="list" id="list"></div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-panel" id="chat-panel">
+                <div class="chat-empty" id="chat-empty">
+                    <div class="chat-empty-icon">◎</div>
+                    <p>Select a conversation</p>
+                </div>
+                <div id="chat-active" style="display:none;flex-direction:column;height:100%;">
+                    <div class="chat-header" id="chat-header">
+                        <button class="back-btn" onclick="closeChat()">←</button>
+                        <div class="chat-header-avatar" id="chat-avatar">—</div>
+                        <div class="chat-header-info">
+                            <h2 id="chat-name">—</h2>
+                            <div class="chat-header-id" id="chat-id">—</div>
+                        </div>
+                        <div class="e2e-badge">
+                            <span class="lock">🔒</span> E2E Encrypted
+                        </div>
+                    </div>
+                    <div id="approval-banner" class="approval-banner" style="display:none;">
+                        <p>This peer wants to connect with you.</p>
+                        <button class="btn-approve-lg" onclick="approveActive()">Approve</button>
+                    </div>
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <div class="chat-input-bar" id="input-bar">
+                        <input class="chat-input" id="msg-input" placeholder="Message…" autocomplete="off">
+                        <button class="btn-send" id="btn-send" disabled onclick="sendMsg()">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+
+        <script>
+            const $ = id => document.getElementById(id);
+            let currentTab = 'chats';
+            let activePeer = null;
+            let myId = '';
+            let myIdName = '';
+            let peers = [];
+            let pollTimer = null;
+
+            function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+            function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200); }
+            function fmtTime(ts) {
+                const d = new Date(ts * 1000);
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                if (d.toDateString() === now.toDateString()) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+            function initials(name, id) {
+                if (name && name.length > 1) return name.slice(0, 2).toUpperCase();
+                return id.slice(0, 2).toUpperCase();
+            }
+
+            async function api(path, opts) {
+                try { const r = await fetch(path, opts); return await r.json(); } catch { return null; }
+            }
+
+            // ── Identity ──────────────────────────────────────
+            async function loadIdentity() {
+                const d = await api('/api/identity');
+                if (d) { 
+                    myId = d.tan_id; 
+                    myIdName = d.friendly_name;
+                    $('my-id').textContent = `${d.friendly_name} · ${d.tan_id}`; 
+                }
+            }
+
+            // ── Tab Switch ────────────────────────────────────
+            function switchTab(tab) {
+                currentTab = tab;
+                document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+                renderList();
+            }
+
+            // ── Load Peers ────────────────────────────────────
+            async function loadPeers() {
+                const d = await api('/api/peers');
+                if (d) peers = d;
+                renderList();
+            }
+
+            // ── Render Sidebar ────────────────────────────────
+            function renderList() {
+                const el = $('list');
+                if (currentTab === 'profile') {
+                    el.innerHTML = `
+                        <div style="padding: 24px 16px; text-align: center;">
+                            <div style="width: 72px; height: 72px; background: var(--w10); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 600; color: var(--w90); margin: 0 auto 16px;">
+                                ${initials(myIdName, myId)}
+                            </div>
+                            <h2 style="font-size: 1.15rem; font-weight: 600; color: var(--w90); margin-bottom: 6px;">${esc(myIdName)}</h2>
+                            <p style="font-size: 0.75rem; color: var(--w40); margin-bottom: 24px;">Your Tan OS Node ID</p>
+                            <div style="background: var(--w06); border: 1px solid var(--border); padding: 12px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 0.72rem; color: var(--w60); word-break: break-all; text-align: left;">
+                                ${myId}
+                            </div>
+                            <div style="margin-top: 32px; font-size: 0.72rem; color: var(--w25); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
+                                Node Status: Online
+                            </div>
+                        </div>
+                    `;
+                    return;
+                } else if (currentTab === 'peers') {
+                    if (!peers.length) { el.innerHTML = '<div class="empty-list">Scanning the mesh…<br>Peers will appear here automatically.</div>'; return; }
+                    el.innerHTML = peers.map(p => {
+                        const name = p.friendly_name || `tan-${p.tan_id.slice(0, 4)}`;
+                        const ini = initials(name, p.tan_id);
+                        let badge = '';
+                        let btn = '';
+                        if (p.status === 'approved') badge = '<span class="badge connected">Connected</span>';
+                        else if (p.status === 'pending_us') {
+                            badge = '<span class="badge pending">Approve?</span>';
+                            btn = `<button class="btn-approve-sm" onclick="event.stopPropagation();approvePeer('${p.tan_id}')">Approve</button>`;
+                        }
+                        else badge = '<span class="badge waiting">Waiting</span>';
+                        return `<div class="list-item${activePeer === p.tan_id ? ' active' : ''}" onclick="openChat('${p.tan_id}')">
+                    <div class="list-avatar">${ini}</div>
+                    <div class="list-info"><div class="list-name">${esc(name)}</div><div class="list-preview">${p.tan_id}</div></div>
+                    <div class="list-meta">${badge}${btn}</div>
+                </div>`;
+                    }).join('');
+                } else {
+                    // Chats tab — show approved peers with conversations
+                    const approved = peers.filter(p => p.status === 'approved');
+                    const pending = peers.filter(p => p.status === 'pending_us');
+                    if (!approved.length && !pending.length) {
+                        el.innerHTML = '<div class="empty-list">No conversations yet.<br>Approve peers to start chatting.</div>';
+                        return;
+                    }
+                    let htmlStr = '';
+                    if (pending.length) {
+                 htmlStr += pending.map(p => {
+                        const name = p.friendly_name || `tan-${p.tan_id.slice(0, 4)}`;
+                        return `<div class="list-item" onclick="openChat('${p.tan_id}')">
+                        <div class="list-avatar">${initials(name, p.tan_id)}</div>
+                        <div class="list-info"><div class="list-name">${esc(name)}</div><div class="list-preview">Wants to connect</div></div>
+                        <div class="list-meta"><span class="badge pending">New</span></div>
+                    </div>`;
+                    }).join('');
+                    }
+             htmlStr += approved.map(p => {
+                        const name = p.friendly_name || `tan-${p.tan_id.slice(0, 4)}`;
+                        return `<div class="list-item${activePeer === p.tan_id ? ' active' : ''}" onclick="openChat('${p.tan_id}')">
+                    <div class="list-avatar">${initials(name, p.tan_id)}</div>
+                    <div class="list-info"><div class="list-name">${esc(name)}</div><div class="list-preview">Tap to chat</div></div>
+                    <div class="list-meta"><span class="badge connected">●</span></div>
+                </div>`;
+                    }).join('');
+                    el.innerHTML = htmlStr;
+                }
+            }
+
+            // ── Open Chat ─────────────────────────────────────
+            async function openChat(peerId) {
+                activePeer = peerId;
+                const p = peers.find(x => x.tan_id === peerId);
+                const name = p?.friendly_name || `tan-${peerId.slice(0, 4)}`;
+
+                $('chat-empty').style.display = 'none';
+                $('chat-active').style.display = 'flex';
+                $('chat-panel').classList.add('open');
+
+                $('chat-avatar').textContent = initials(name, peerId);
+                $('chat-name').textContent = name;
+                $('chat-id').textContent = peerId;
+
+                const isApproved = p?.status === 'approved';
+                const isPendingUs = p?.status === 'pending_us';
+
+                $('approval-banner').style.display = isPendingUs ? 'flex' : 'none';
+                $('input-bar').style.display = isApproved ? 'flex' : 'none';
+
+                renderList();
+                await loadChat(peerId);
+
+                if (pollTimer) clearInterval(pollTimer);
+                pollTimer = setInterval(() => loadChat(peerId), 1500);
+            }
+
+            function closeChat() {
+                activePeer = null;
+                $('chat-panel').classList.remove('open');
+                $('chat-empty').style.display = 'flex';
+                $('chat-active').style.display = 'none';
+                if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+                renderList();
+            }
+
+            // ── Load Chat Messages ────────────────────────────
+            let lastMsgCount = 0;
+            async function loadChat(peerId) {
+                if (peerId !== activePeer) return;
+                const msgs = await api(`/api/messages/${peerId}`);
+                if (!msgs) return;
+                if (msgs.length === lastMsgCount) return; // no change
+                lastMsgCount = msgs.length;
+
+                const feed = $('chat-messages');
+                feed.inner = msgs.map(m => {
+                    const dir = m.direction;
+                    const time = fmtTime(m.timestamp);
+                    return `<div class="bubble-wrap ${dir}"><div><div class="bubble">${esc(m.text)}</div><div class="bubble-time">${time}</div></div></div>`;
+                }).join('');
+                feed.scrollTop = feed.scrollHeight;
+
+                // Update send button state
+                const p = peers.find(x => x.tan_id === peerId);
+                $('btn-send').disabled = p?.status !== 'approved';
+            }
+
+            // ── Approve ───────────────────────────────────────
+            async function approvePeer(id) {
+                const r = await api('/api/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tan_id: id }) });
+                if (r?.ok) { toast('Approved ✓'); await loadPeers(); if (activePeer === id) openChat(id); }
+                else toast(r?.message || 'Failed');
+            }
+
+            async function approveActive() {
+                if (activePeer) await approvePeer(activePeer);
+            }
+
+            // ── Send Message ──────────────────────────────────
+            async function sendMsg() {
+                const text = $('msg-input').value.trim();
+                if (!text || !activePeer) return;
+                $('msg-input').value = '';
+                const r = await api('/api/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tan_id: activePeer, message: text }) });
+                if (r?.ok) await loadChat(activePeer);
+                else toast(r?.message || 'Send failed');
+            }
+
+            $('msg-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
+            $('msg-input').addEventListener('input', () => {
+                const p = peers.find(x => x.tan_id === activePeer);
+                $('btn-send').disabled = !$('msg-input').value.trim() || p?.status !== 'approved';
+            });
+
+            // ── Init ──────────────────────────────────────────
+            loadIdentity();
+            loadPeers();
+            setInterval(loadPeers, 2000);
+        </script>
+    </body>
+</>
