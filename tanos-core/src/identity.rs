@@ -9,6 +9,8 @@ use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
 use std::path::{Path, PathBuf};
 
+use std::sync::Mutex;
+
 /// Number of leading public key bytes used to derive the short node ID.
 const TAN_ID_BYTES: usize = 8;
 
@@ -18,7 +20,7 @@ pub struct NodeIdentity {
     pub signing_key: SigningKey,
     pub verifying_key: VerifyingKey,
     pub tan_id: String,
-    pub friendly_name: String,
+    pub friendly_name: Mutex<String>,
 }
 
 impl NodeIdentity {
@@ -31,7 +33,7 @@ impl NodeIdentity {
             signing_key,
             verifying_key,
             tan_id: tan_id.clone(),
-            friendly_name: friendly_name.unwrap_or(format!("tan-{}", &tan_id[..4])),
+            friendly_name: Mutex::new(friendly_name.unwrap_or(format!("tan-{}", &tan_id[..4]))),
         }
     }
 
@@ -44,7 +46,7 @@ impl NodeIdentity {
             signing_key,
             verifying_key,
             tan_id,
-            friendly_name,
+            friendly_name: Mutex::new(friendly_name),
         }
     }
 
@@ -131,7 +133,8 @@ pub fn save_identity(identity: &NodeIdentity) -> Result<()> {
     
     std::fs::write(&path, identity.secret_key_bytes())
         .context("failed to write identity file")?;
-    std::fs::write(&name_path, &identity.friendly_name)
+    let name = identity.friendly_name.lock().unwrap();
+    std::fs::write(&name_path, name.as_str())
         .context("failed to write identity name file")?;
     Ok(())
 }
@@ -163,7 +166,8 @@ mod tests {
     #[test]
     fn roundtrip_secret_bytes() {
         let original = NodeIdentity::generate(Some("Alice".to_string()));
-        let restored = NodeIdentity::from_secret_bytes(&original.secret_key_bytes(), "Alice".to_string());
+        let original_name = original.friendly_name.lock().unwrap().clone();
+        let restored = NodeIdentity::from_secret_bytes(&original.secret_key_bytes(), original_name);
         assert_eq!(original.tan_id, restored.tan_id);
         assert_eq!(
             original.public_key_bytes(),

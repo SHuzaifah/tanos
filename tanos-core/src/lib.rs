@@ -54,8 +54,10 @@ pub struct DiscoveryBeacon {
     pub public_key: [u8; 32],
     /// Full 32-byte X25519 encryption public key.
     pub encryption_pubkey: [u8; 32],
-    /// TCP port the node is listening on (deprecated in libp2p, kept for compat or future use).
+    ///TCP port the node is listening on (deprecated in libp2p, kept for compat or future use).
     pub listen_port: u16,
+    /// Human-readable username chosen by the user.
+    pub friendly_name: String,
     /// Number of hops this beacon has travelled (starts at 0).
     pub hop_count: u8,
     /// Unix timestamp in milliseconds when the beacon was created.
@@ -118,6 +120,7 @@ impl DiscoveryBeacon {
         buf.extend_from_slice(&self.public_key);
         buf.extend_from_slice(&self.encryption_pubkey);
         buf.extend_from_slice(&self.listen_port.to_le_bytes());
+        buf.extend_from_slice(self.friendly_name.as_bytes());
         buf.push(self.hop_count);
         buf.extend_from_slice(&self.timestamp.to_le_bytes());
         buf
@@ -135,6 +138,7 @@ impl DiscoveryBeacon {
             public_key: identity.public_key_bytes(),
             encryption_pubkey: crypto::x25519_pubkey_from_secret(&identity.secret_key_bytes()),
             listen_port,
+            friendly_name: identity.friendly_name.lock().unwrap().clone(),
             hop_count: 0,
             timestamp,
             signature: [0u8; 64],

@@ -110,8 +110,8 @@ async fn handle_setup(
     Form(form): Form<SetupForm>,
 ) -> Html<&'static str> {
     let mut id_opt = state.identity.lock().await;
-    if let Some(mut identity) = id_opt.take() {
-        identity.friendly_name = form.username;
+    if let Some(identity) = id_opt.take() {
+        *identity.friendly_name.lock().unwrap() = form.username;
         // save it
         if let Err(e) = identity::save_identity(&identity) {
             tracing::error!("Failed to save identity: {}", e);

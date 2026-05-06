@@ -1,9 +1,7 @@
 use anyhow::{Context, Result};
 use futures::StreamExt;
 use libp2p::{
-    core::upgrade::Version,
     gossipsub, mdns, noise, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux, PeerId, Swarm,
-    Transport,
 };
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -13,7 +11,7 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info};
 
 use tanos_core::identity::NodeIdentity;
-use tanos_core::{GossipPacket, TanMessage};
+use tanos_core::GossipPacket;
 
 #[derive(NetworkBehaviour)]
 pub struct TanBehaviour {

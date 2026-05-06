@@ -1,5 +1,5 @@
-<!DOCTYPE>
-< lang="en">
+<!DOCTYPE html>
+<html lang="en">
 
     <head>
         <meta charset="UTF-8">
@@ -96,6 +96,16 @@
                 width: 7px;
                 height: 7px;
                 border-radius: 50%;
+                background: var(--green);
+                transition: background 0.3s;
+            }
+
+            .dot.offline {
+                background: #ff3b30;
+                animation: none;
+            }
+
+            .dot.online {
                 background: var(--green);
                 animation: pulse 2.5s ease-in-out infinite;
             }
@@ -605,13 +615,14 @@
                 <div class="sidebar-header">
                     <h1>TanOS</h1>
                     <div class="sidebar-identity">
-                        <div class="dot"></div>
-                        <span id="my-id">Loading…</span>
+                        <div class="dot online" id="status-dot"></div>
+                        <span id="my-id">Connecting…</span>
                     </div>
                 </div>
                 <div class="tabs">
                     <button class="tab active" data-tab="chats" onclick="switchTab('chats')">Chats</button>
                     <button class="tab" data-tab="peers" onclick="switchTab('peers')">Peers</button>
+                    <button class="tab" data-tab="console" onclick="switchTab('console')">Console</button>
                     <button class="tab" data-tab="profile" onclick="switchTab('profile')">Profile</button>
                 </div>
                 <div class="list" id="list"></div>
@@ -649,6 +660,24 @@
                         </button>
                     </div>
                 </div>
+                <!-- Console Panel -->
+                <div id="console-panel" style="display:none;flex-direction:column;height:100%;background:#000;font-family:var(--mono);">
+                    <div class="chat-header" style="background: var(--surface);">
+                        <div class="chat-header-avatar" style="background:var(--green);color:#000;font-size:1.2rem;">&gt;_</div>
+                        <div class="chat-header-info">
+                            <h2>System Console</h2>
+                            <div class="chat-header-id">Web CLI Terminal</div>
+                        </div>
+                    </div>
+                    <div id="terminal-output" style="flex: 1; overflow-y: auto; color: var(--green); font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; padding: 20px;">TanOS Web CLI v0.1.0
+Type 'help' for available commands.
+
+</div>
+                    <div style="display: flex; gap: 12px; align-items: center; border-top: 1px solid var(--border); padding: 16px 20px; background: var(--bg);">
+                        <span style="color: var(--green); font-size: 1rem; font-weight: bold;">$</span>
+                        <input id="terminal-input" style="flex: 1; background: transparent; border: none; outline: none; color: #fff; font-family: var(--mono); font-size: 1rem;" placeholder="Type command..." autocomplete="off" onkeydown="if(event.key==='Enter') execConsoleCommand()">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -662,6 +691,7 @@
             let myIdName = '';
             let peers = [];
             let pollTimer = null;
+            let isEditingProfile = false;
 
             function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
             function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200); }
@@ -695,6 +725,14 @@
             function switchTab(tab) {
                 currentTab = tab;
                 document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+                
+                // Hide console if switching away
+                if (tab !== 'console') {
+                    $('console-panel').style.display = 'none';
+                    if (!activePeer) $('chat-empty').style.display = 'flex';
+                    else $('chat-active').style.display = 'flex';
+                }
+                
                 renderList();
             }
 
@@ -709,21 +747,39 @@
             function renderList() {
                 const el = $('list');
                 if (currentTab === 'profile') {
+                    if (isEditingProfile) return;
                     el.innerHTML = `
                         <div style="padding: 24px 16px; text-align: center;">
                             <div style="width: 72px; height: 72px; background: var(--w10); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 600; color: var(--w90); margin: 0 auto 16px;">
                                 ${initials(myIdName, myId)}
                             </div>
-                            <h2 style="font-size: 1.15rem; font-weight: 600; color: var(--w90); margin-bottom: 6px;">${esc(myIdName)}</h2>
+                            <div id="profile-view">
+                                <h2 style="font-size: 1.15rem; font-weight: 600; color: var(--w90); margin-bottom: 6px;">${esc(myIdName)}</h2>
+                                <button onclick="editProfile()" style="background:none;border:none;color:var(--w40);font-size:0.72rem;cursor:pointer;margin-bottom:16px;">Edit Name</button>
+                            </div>
+                            <div id="profile-edit" style="display:none;margin-bottom:16px;">
+                                <input id="edit-name-input" value="${esc(myIdName)}" style="background:var(--card);border:1px solid var(--border);color:#fff;padding:8px 12px;border-radius:var(--radius-xs);font-family:var(--sans);font-size:0.9rem;width:100%;text-align:center;margin-bottom:8px;">
+                                <div style="display:flex;gap:8px;justify-content:center;">
+                                    <button onclick="saveProfile()" style="background:var(--white);color:var(--bg);border:none;padding:6px 12px;border-radius:14px;font-size:0.72rem;font-weight:600;cursor:pointer;">Save</button>
+                                    <button onclick="cancelProfileEdit()" style="background:var(--w10);color:var(--white);border:none;padding:6px 12px;border-radius:14px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
+                                </div>
+                            </div>
                             <p style="font-size: 0.75rem; color: var(--w40); margin-bottom: 24px;">Your Tan OS Node ID</p>
                             <div style="background: var(--w06); border: 1px solid var(--border); padding: 12px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 0.72rem; color: var(--w60); word-break: break-all; text-align: left;">
                                 ${myId}
                             </div>
                             <div style="margin-top: 32px; font-size: 0.72rem; color: var(--w25); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
-                                Node Status: Online
+                                Node Status: <span id="node-status-text">Online</span>
                             </div>
                         </div>
                     `;
+                    return;
+                } else if (currentTab === 'console') {
+                    el.innerHTML = '<div class="empty-list">Console active in main panel.</div>';
+                    $('chat-empty').style.display = 'none';
+                    $('chat-active').style.display = 'none';
+                    $('console-panel').style.display = 'flex';
+                    setTimeout(() => $('terminal-input').focus(), 50);
                     return;
                 } else if (currentTab === 'peers') {
                     if (!peers.length) { el.innerHTML = '<div class="empty-list">Scanning the mesh…<br>Peers will appear here automatically.</div>'; return; }
@@ -782,6 +838,7 @@
                 const name = p?.friendly_name || `tan-${peerId.slice(0, 4)}`;
 
                 $('chat-empty').style.display = 'none';
+                $('console-panel').style.display = 'none';
                 $('chat-active').style.display = 'flex';
                 $('chat-panel').classList.add('open');
 
@@ -860,10 +917,95 @@
                 $('btn-send').disabled = !$('msg-input').value.trim() || p?.status !== 'approved';
             });
 
+            async function execConsoleCommand() {
+                const input = $('terminal-input');
+                const cmd = input.value.trim();
+                if (!cmd) return;
+                input.value = '';
+
+                const out = $('terminal-output');
+                out.textContent += `$ ${cmd}\n`;
+
+                if (cmd === 'clear') {
+                    out.textContent = '';
+                    return;
+                }
+
+                const res = await api('/api/console', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+
+                if (res) {
+                    out.textContent += `${res.output}\n\n`;
+                } else {
+                    out.textContent += `Error: Failed to connect to backend.\n\n`;
+                }
+                out.scrollTop = out.scrollHeight;
+            }
+
+            // ── Connectivity ──────────────────────────────────
+            let isOnline = true;
+            async function checkStatus() {
+                const s = await api('/api/status');
+                const dot = $('status-dot');
+                const statusText = $('node-status-text');
+                
+                if (s && s.online) {
+                    if (!isOnline) {
+                        isOnline = true;
+                        dot.className = 'dot online';
+                        if (statusText) statusText.textContent = 'Online';
+                        toast('Node back online');
+                        loadIdentity();
+                    }
+                } else {
+                    if (isOnline) {
+                        isOnline = false;
+                        dot.className = 'dot offline';
+                        if (statusText) statusText.textContent = 'Offline';
+                        toast('Node connection lost');
+                    }
+                }
+            }
+
+            // ── Profile Editing ───────────────────────────────
+            function editProfile() {
+                isEditingProfile = true;
+                $('profile-view').style.display = 'none';
+                $('profile-edit').style.display = 'block';
+            }
+            function cancelProfileEdit() {
+                isEditingProfile = false;
+                $('profile-view').style.display = 'block';
+                $('profile-edit').style.display = 'none';
+                renderList();
+            }
+            async function saveProfile() {
+                const newName = $('edit-name-input').value.trim();
+                if (!newName) return;
+                const r = await api('/api/identity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ friendly_name: newName })
+                });
+                if (r?.ok) {
+                    isEditingProfile = false;
+                    myIdName = newName;
+                    toast('Name updated');
+                    renderList();
+                    loadIdentity();
+                } else {
+                    toast(r?.message || 'Update failed');
+                }
+            }
+
             // ── Init ──────────────────────────────────────────
             loadIdentity();
             loadPeers();
             setInterval(loadPeers, 2000);
+            setInterval(checkStatus, 3000);
         </script>
     </body>
 </>

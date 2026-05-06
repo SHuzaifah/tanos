@@ -81,7 +81,7 @@ async fn main() -> Result<()> {
         cli::Commands::Start => run_node(identity, just_setup).await,
         cli::Commands::Id => {
             println!("TanID:       {}", identity.tan_id);
-            println!("Name:        {}", identity.friendly_name);
+            println!("Name:        {}", identity.friendly_name.lock().unwrap());
             println!("Public Key:  {}", hex::encode(identity.public_key_bytes()));
             Ok(())
         }
@@ -110,7 +110,7 @@ async fn run_node(identity: Arc<identity::NodeIdentity>, just_setup: bool) -> Re
     let database = db::open_db(&data_dir)?;
     info!(
         tan_id = %identity.tan_id,
-        name = %identity.friendly_name,
+        name = %identity.friendly_name.lock().unwrap(),
         db = ?data_dir.join("tanos.db"),
         "🌐 TanOS node starting"
     );
@@ -190,38 +190,44 @@ async fn run_node(identity: Arc<identity::NodeIdentity>, just_setup: bool) -> Re
                                 if !pt.contains_key(&beacon.tan_id) {
                                     // New peer! Check if we already know them from DB
                                     let db = database.lock().await;
-                                    let db_status = db.get_peer(&beacon.tan_id)
-                                        .ok()
-                                        .flatten()
+                                    let db_peer = db.get_peer(&beacon.tan_id).ok().flatten();
+                                    let db_status = db_peer.as_ref()
                                         .map(|p| PeerStatus::from_str(&p.status))
                                         .unwrap_or(PeerStatus::PendingThem);
+                                    let mut db_name = db_peer.map(|p| p.friendly_name).unwrap_or_default();
+                                    if db_name.is_empty() {
+                                        db_name = beacon.friendly_name.clone();
+                                    }
                                     drop(db);
 
-                                    info!("🔍 Discovered peer: {} (status: {:?})", beacon.tan_id, db_status);
+                                    info!("🔍 Discovered peer: {} (name: {}, status: {:?})", beacon.tan_id, db_name, db_status);
 
                                     pt.insert(beacon.tan_id.clone(), PeerInfo {
                                         status: db_status.clone(),
-                                        friendly_name: String::new(),
+                                        friendly_name: db_name,
                                         beacon: beacon.clone(),
                                     });
 
                                     // Always send a friend request so they know we exist
                                     let req = InnerMessage::FriendRequest {
-                                        friendly_name: identity.friendly_name.clone(),
+                                        friendly_name: identity.friendly_name.lock().unwrap().clone(),
                                     };
                                     let _ = send_inner_message(&identity, &beacon, req, &msg_tx).await;
 
                                     // If we were already approved (from DB), also send approval
                                     if db_status == PeerStatus::Approved {
                                         let approval = InnerMessage::FriendApproval {
-                                            friendly_name: identity.friendly_name.clone(),
+                                            friendly_name: identity.friendly_name.lock().unwrap().clone(),
                                         };
                                         let _ = send_inner_message(&identity, &beacon, approval, &msg_tx).await;
                                     }
                                 } else {
-                                    // Update beacon (keeps keys fresh)
+                                    // Update beacon (keeps keys fresh) and name
                                     if let Some(p) = pt.get_mut(&beacon.tan_id) {
                                         p.beacon = beacon.clone();
+                                        if !beacon.friendly_name.is_empty() {
+                                            p.friendly_name = beacon.friendly_name.clone();
+                                        }
                                     }
                                 }
                             }
@@ -256,7 +262,7 @@ async fn run_node(identity: Arc<identity::NodeIdentity>, just_setup: bool) -> Re
                                             if p.status == PeerStatus::Approved {
                                                 info!("🤝 {} ({}) reconnected — tunnel re-established.", friendly_name, tan_msg.from_id);
                                                 let approval = InnerMessage::FriendApproval {
-                                                    friendly_name: identity.friendly_name.clone(),
+                                                    friendly_name: identity.friendly_name.lock().unwrap().clone(),
                                                 };
                                                 let _ = send_inner_message(&identity, &p.beacon.clone(), approval, &msg_tx).await;
                                             } else if p.status != PeerStatus::PendingUs {

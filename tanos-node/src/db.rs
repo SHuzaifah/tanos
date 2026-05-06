@@ -108,6 +108,7 @@ impl SovereignDb {
     }
 
     /// Get all messages after a given ID (for incremental polling).
+    #[allow(dead_code)]
     pub fn get_messages_since(&self, since_id: i64) -> Result<Vec<StoredMessage>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, peer_id, text, direction, timestamp FROM messages WHERE id > ?1 ORDER BY timestamp ASC"
@@ -175,6 +176,7 @@ impl SovereignDb {
     }
 
     /// Update just the status of a peer.
+    #[allow(dead_code)]
     pub fn update_peer_status(&self, tan_id: &str, status: &str) -> Result<()> {
         self.conn.execute(
             "UPDATE peers SET status = ?1 WHERE tan_id = ?2",
@@ -200,6 +202,7 @@ impl SovereignDb {
     }
 
     /// Get all stored peers.
+    #[allow(dead_code)]
     pub fn get_all_peers(&self) -> Result<Vec<StoredPeer>> {
         let mut stmt = self.conn.prepare(
             "SELECT tan_id, friendly_name, status, first_seen FROM peers ORDER BY first_seen DESC"
