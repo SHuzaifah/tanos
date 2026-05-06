@@ -878,7 +878,7 @@ Type 'help' for available commands.
                 lastMsgCount = msgs.length;
 
                 const feed = $('chat-messages');
-                feed.inner = msgs.map(m => {
+                feed.innerHTML = msgs.map(m => {
                     const dir = m.direction;
                     const time = fmtTime(m.timestamp);
                     return `<div class="bubble-wrap ${dir}"><div><div class="bubble">${esc(m.text)}</div><div class="bubble-time">${time}</div></div></div>`;
