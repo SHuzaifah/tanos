@@ -45,16 +45,16 @@ mod serde_bytes_64 {
 
 // ─── Wire Formats ────────────────────────────────────────────────────────
 
-/// Broadcast over UDP every 5 seconds to announce presence on the mesh.
+/// Broadcast over libp2p gossipsub to announce presence and keys.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveryBeacon {
-    /// Short node identifier: hex of first 8 bytes of the Ed25519 public key.
-    pub node_id: String,
+    /// Short TanIDentifier: hex of first 8 bytes of the Ed25519 public key.
+    pub tan_id: String,
     /// Full 32-byte Ed25519 public key.
     pub public_key: [u8; 32],
     /// Full 32-byte X25519 encryption public key.
     pub encryption_pubkey: [u8; 32],
-    /// TCP port the node is listening on for messages (default 7701).
+    /// TCP port the node is listening on (deprecated in libp2p, kept for compat or future use).
     pub listen_port: u16,
     /// Number of hops this beacon has travelled (starts at 0).
     pub hop_count: u8,
@@ -65,7 +65,19 @@ pub struct DiscoveryBeacon {
     pub signature: [u8; 64],
 }
 
-/// Sent over TCP for encrypted node-to-node communication.
+/// The plaintext payload structure inside a TanMessage.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
+pub enum InnerMessage {
+    /// A friend request handshake. Contains the sender's friendly name.
+    FriendRequest { friendly_name: String },
+    /// A friend approval handshake. Contains the approver's friendly name.
+    FriendApproval { friendly_name: String },
+    /// A standard text message.
+    Text(String),
+}
+
+/// Sent over libp2p gossipsub for encrypted node-to-node communication.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TanMessage {
     /// UUID v4 identifier for deduplication.
@@ -74,7 +86,7 @@ pub struct TanMessage {
     pub from_id: String,
     /// Destination node's short node ID.
     pub to_id: String,
-    /// Encrypted payload (ChaCha20-Poly1305 ciphertext).
+    /// Encrypted payload (ChaCha20-Poly1305 ciphertext of JSON InnerMessage).
     pub payload: Vec<u8>,
     /// X25519 ephemeral public key used for this message's ECDH.
     pub ephemeral_pubkey: [u8; 32],
@@ -87,6 +99,14 @@ pub struct TanMessage {
     pub signature: [u8; 64],
 }
 
+/// A wrapper enum for all data gossiped on the tanos-mesh topic.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "packet_type")]
+pub enum GossipPacket {
+    Beacon { data: DiscoveryBeacon },
+    Message { data: TanMessage },
+}
+
 // ─── Beacon Construction & Verification ──────────────────────────────────
 
 impl DiscoveryBeacon {
@@ -94,7 +114,7 @@ impl DiscoveryBeacon {
     /// Covers every field except `signature` itself.
     pub fn signable_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::new();
-        buf.extend_from_slice(self.node_id.as_bytes());
+        buf.extend_from_slice(self.tan_id.as_bytes());
         buf.extend_from_slice(&self.public_key);
         buf.extend_from_slice(&self.encryption_pubkey);
         buf.extend_from_slice(&self.listen_port.to_le_bytes());
@@ -111,7 +131,7 @@ impl DiscoveryBeacon {
             .as_millis() as u64;
 
         let mut beacon = Self {
-            node_id: identity.node_id.clone(),
+            tan_id: identity.tan_id.clone(),
             public_key: identity.public_key_bytes(),
             encryption_pubkey: crypto::x25519_pubkey_from_secret(&identity.secret_key_bytes()),
             listen_port,
@@ -147,14 +167,14 @@ mod tests {
 
     #[test]
     fn beacon_sign_and_verify() {
-        let id = identity::NodeIdentity::generate();
+        let id = identity::NodeIdentity::generate(None);
         let beacon = DiscoveryBeacon::new_signed(&id, 7701);
         assert!(beacon.verify_signature().is_ok());
     }
 
     #[test]
     fn beacon_tampered_fails_verify() {
-        let id = identity::NodeIdentity::generate();
+        let id = identity::NodeIdentity::generate(None);
         let mut beacon = DiscoveryBeacon::new_signed(&id, 7701);
         beacon.hop_count = 99; // tamper
         assert!(beacon.verify_signature().is_err());
@@ -162,11 +182,11 @@ mod tests {
 
     #[test]
     fn beacon_serialization_roundtrip() {
-        let id = identity::NodeIdentity::generate();
+        let id = identity::NodeIdentity::generate(None);
         let beacon = DiscoveryBeacon::new_signed(&id, 7701);
         let json = serde_json::to_string(&beacon).expect("serialize");
         let restored: DiscoveryBeacon = serde_json::from_str(&json).expect("deserialize");
-        assert_eq!(beacon.node_id, restored.node_id);
+        assert_eq!(beacon.tan_id, restored.tan_id);
         assert_eq!(beacon.signature, restored.signature);
     }
 }

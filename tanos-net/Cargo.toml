@@ -11,3 +11,5 @@ uuid = { version = "1", features = ["v4"] }
 serde_json = "1"
 anyhow = "1"
 tanos-core = { path = "../tanos-core" }
+libp2p = { version = "0.56.0", features = ["tokio", "tcp", "noise", "yamux", "mdns", "relay", "kad", "macros", "request-response", "gossipsub"] }
+futures = "0.3.32"

@@ -26,15 +26,10 @@
 cargo run -p tanos-node -- start
 ```
 
-### Docker (5-node mesh)
-```bash
-docker-compose up --build
-```
-
 ### CLI Commands
 ```bash
 tanos-node start          # Start the mesh node
-tanos-node id             # Print node ID and public key
+tanos-TanID             # Print node ID and public key
 tanos-node peers          # Print current peer table
 tanos-node send <id> msg  # Send encrypted message
 tanos-node route          # Print routing table
@@ -43,7 +38,7 @@ tanos-node route          # Print routing table
 ## Wire Formats
 
 ### DiscoveryBeacon (UDP)
-Broadcast every 5s. Fields: `node_id`, `public_key`, `listen_port`,
+Broadcast every 5s. Fields: `tan_id`, `public_key`, `listen_port`,
 `hop_count`, `timestamp`, `signature`.
 
 ### TanMessage (TCP)

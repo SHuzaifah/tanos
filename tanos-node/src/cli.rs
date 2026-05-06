@@ -32,4 +32,9 @@ pub enum Commands {
     },
     /// Print the full routing table
     Route,
+    /// Approve a pending Friend Request
+    Approve {
+        /// Target node ID to approve
+        id: String,
+    },
 }
